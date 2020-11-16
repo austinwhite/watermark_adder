@@ -10,7 +10,7 @@ class WatermarkAdder:
         self.watermark_pos_vertical = "bottom"
         self.watermark_pos_center = False
         self.output_path = "./output.avi"
-        
+
         # for testing purposes, will be removed when GUI is created
         self.set_video_path('./driving.mp4')
         self.set_watermark_path('./watermark.png')
@@ -18,11 +18,12 @@ class WatermarkAdder:
 
         self.show_processing = True
         self.watermark_transparency = 0.5
+        
         self.overlay_watermark()
 
     def set_video_path(self, path):
         self.video_path = path
-    
+
     def set_watermark_path(self, path):
         self.watermark_path = path
 
@@ -61,7 +62,7 @@ class WatermarkAdder:
             offset_h = 20
         elif vertical == "bottom":
             offset_h = video_h - watermark_h - 20
-        
+
         if horizontal == "left":
             offset_w = 20
         elif horizontal == "right":
@@ -114,7 +115,6 @@ class WatermarkAdder:
         self.watermark_cv_obj = cv2.cvtColor(self.watermark_cv_obj, cv2.COLOR_BGR2BGRA)
 
         capture = cv2.VideoCapture(self.video_path)
-
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         output = cv2.VideoWriter(self.output_path, fourcc, capture.get(cv2.CAP_PROP_FPS), 
             (int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))))
@@ -128,7 +128,6 @@ class WatermarkAdder:
                     cv2.imshow('frame', frame)
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
                 output.write(frame)
-
                 if cv2.waitKey(1) & 0xFF == 27:
                     break
             else:
