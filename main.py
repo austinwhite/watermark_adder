@@ -6,8 +6,8 @@ class WatermarkAdder:
         self.video_path = None
         self.watermark_path = None
         self.watermark_cv_obj = None
-        self.watermark_pos_horizontal = None
-        self.watermark_pos_vertical = None
+        self.watermark_pos_horizontal = "right"
+        self.watermark_pos_vertical = "bottom"
         self.watermark_pos_center = False
         self.output_path = "./output.avi"
         
@@ -35,7 +35,7 @@ class WatermarkAdder:
     def toggle_show_processing(self):
         self.show_processing = not self.show_processing
 
-    def set_watermark_position(self, vertical=None, horizontal=None, center=False):
+    def set_watermark_position(self, vertical, horizontal, center):
         if vertical is not None:
             self.watermark_pos_vertical = vertical
         if horizontal is not None:
@@ -44,9 +44,6 @@ class WatermarkAdder:
             self.watermark_pos_center = center
 
     def set_watermark_offsets(self, vertical=None, horizontal=None, center=False):
-        if vertical == None and horizontal == None and center == False:
-            return self.set_watermark_offsets(vertical="bottom", horizontal="right")
-
         temp_cap = cv2.VideoCapture(self.video_path)
         video_w = temp_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         video_h = temp_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -88,11 +85,13 @@ class WatermarkAdder:
         return resized
 
     def generate_frame_with_overlay(self, frame):
-        frame_h, frame_w, frame_c = frame.shape
+        frame_h, frame_w, _ = frame.shape
         overlay = np.zeros((frame_h, frame_w, 4), dtype='uint8')
 
-        watermark_h, watermark_w, watermark_c = self.watermark_cv_obj.shape
-        offset_h, offset_w = self.set_watermark_offsets()
+        watermark_h, watermark_w, _ = self.watermark_cv_obj.shape
+        offset_h, offset_w = self.set_watermark_offsets(self.watermark_pos_vertical, 
+                                                        self.watermark_pos_horizontal, 
+                                                        self.watermark_pos_center)
 
         for i in range(0, watermark_h):
             for j in range(0, watermark_w):
