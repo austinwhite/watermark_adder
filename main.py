@@ -1,75 +1,143 @@
 import cv2
 import numpy as np
 
-# source: https://stackoverflow.com/a/44659589
-def resize_image(image, width=None, height=None, inter=cv2.INTER_AREA):
-    dim = None
-    (h, w) = image.shape[:2]
-    if width is None and height is None:
-        return image
-    if width is None:
-        r = height / float(h)
-        dim = (int(w*r), height)
-    else:
-        r = width / float(w)
-        dim = (width, int(h*r))
-    resized = cv2.resize(image, dim, interpolation=inter)
-    return resized
+class WatermarkAdder:
+    def __init__(self):
+        self.video_path = None
+        self.watermark_path = None
+        self.watermark_cv_obj = None
+        self.watermark_pos_horizontal = None
+        self.watermark_pos_vertical = None
+        self.watermark_pos_center = False
+        self.output_path = "./output.avi"
+        
+        # for testing purposes, will be removed when GUI is created
+        self.set_video_path('./driving.mp4')
+        self.set_watermark_path('./watermark.png')
 
 
-def overlay_watermark(frame, watermark):
-    frame_h, frame_w, frame_c = frame.shape
-    overlay = np.zeros((frame_h, frame_w, 4), dtype='uint8')
+        self.show_processing = True
+        self.watermark_transparency = 0.5
+        self.overlay_watermark()
 
-    watermark_h, watermark_w, watermark_c = watermark.shape
+    def set_video_path(self, path):
+        self.video_path = path
+    
+    def set_watermark_path(self, path):
+        self.watermark_path = path
 
-    offset_w = frame_w - watermark_w - 20
-    offset_h = frame_h - watermark_h - 20
+    def set_output_path(self, path):
+        self.output_path = path
 
-    for i in range(0, watermark_h):
-        for j in range(0, watermark_w):
-            if watermark[i,j][3] != 0:
-                overlay[i+offset_h, j+offset_w] = watermark[i, j]
+    def set_watermark_transparency(self, value):
+        self.watermark_transparency = value
 
-    cv2.addWeighted(overlay, 0.5, frame, 1.0, 0, frame)
-    return frame
+    def toggle_show_processing(self):
+        self.show_processing = not self.show_processing
 
+    def set_watermark_position(self, vertical=None, horizontal=None, center=False):
+        if vertical is not None:
+            self.watermark_pos_vertical = vertical
+        if horizontal is not None:
+            self.watermark_pos_horizontal = horizontal
+        if center != self.watermark_pos_center:
+            self.watermark_pos_center = center
 
-def main():
-    VIDEO_FILE = 'driving.mp4'
-    WATERMARK_FILE = "watermark.png"
+    def set_watermark_offsets(self, vertical=None, horizontal=None, center=False):
+        if vertical == None and horizontal == None and center == False:
+            return self.set_watermark_offsets(vertical="bottom", horizontal="right")
 
-    watermark = cv2.imread(WATERMARK_FILE)
-    watermark = resize_image(watermark, height=50)
-    watermark = cv2.cvtColor(watermark, cv2.COLOR_BGR2BGRA)
-    cv2.imshow('water', watermark)
+        temp_cap = cv2.VideoCapture(self.video_path)
+        video_w = temp_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        video_h = temp_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        watermark_h, watermark_w, _ = self.watermark_cv_obj.shape
+        offset_w = 0
+        offset_h = 0
 
+        if center == True:
+            if vertical is None:
+                offset_h = video_h/2 - watermark_h/2
+            if horizontal is None:
+                offset_w = video_w/2 - watermark_w/2
 
-    capture = cv2.VideoCapture(VIDEO_FILE)
-    capture.set(3, 1280)
-    capture.set(4, 720)
+        if vertical == "top":
+            offset_h = 20
+        elif vertical == "bottom":
+            offset_h = video_h - watermark_h - 20
+        
+        if horizontal == "left":
+            offset_w = 20
+        elif horizontal == "right":
+            offset_w = video_w - watermark_w - 20
 
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    output = cv2.VideoWriter('output.avi', fourcc, capture.get(cv2.CAP_PROP_FPS), 
-        (int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))))
+        temp_cap.release()
+        return int(offset_h), int(offset_w)
 
-    while True:
-        ret, frame = capture.read()
-        if ret is True:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
-            frame = overlay_watermark(frame, watermark)
-            cv2.imshow('frame', frame)
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
-            output.write(frame)
-
-            if cv2.waitKey(1) & 0xFF == 27:
-                break
+    def resize_image(self, image, width=None, height=None, inter=cv2.INTER_AREA):
+        dim = None
+        (h, w) = image.shape[:2]
+        if width is None and height is None:
+            return image
+        if width is None:
+            r = height / float(h)
+            dim = (int(w*r), height)
         else:
-            break
+            r = width / float(w)
+            dim = (width, int(h*r))
+        resized = cv2.resize(image, dim, interpolation=inter)
+        return resized
 
-    capture.release()
-    output.release()
-    cv2.destroyAllWindows()
+    def generate_frame_with_overlay(self, frame):
+        frame_h, frame_w, frame_c = frame.shape
+        overlay = np.zeros((frame_h, frame_w, 4), dtype='uint8')
+
+        watermark_h, watermark_w, watermark_c = self.watermark_cv_obj.shape
+        offset_h, offset_w = self.set_watermark_offsets()
+
+        for i in range(0, watermark_h):
+            for j in range(0, watermark_w):
+                if self.watermark_cv_obj[i,j][3] != 0:
+                    overlay[i+offset_h, j+offset_w] = self.watermark_cv_obj[i, j]
+
+        cv2.addWeighted(overlay, self.watermark_transparency, frame, 1.0, 0, frame)
+        return frame    
+
+    def overlay_watermark(self):
+        if self.video_path is None or self.watermark_path is None:
+            if self.video_path:
+                print("Configure video path.")
+            else:
+                print("Configure watermark path.")
+            return 1
+
+        self.watermark_cv_obj = cv2.imread(self.watermark_path)
+        self.watermark_cv_obj = self.resize_image(self.watermark_cv_obj, height=50)
+        self.watermark_cv_obj = cv2.cvtColor(self.watermark_cv_obj, cv2.COLOR_BGR2BGRA)
+
+        capture = cv2.VideoCapture(self.video_path)
+
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        output = cv2.VideoWriter(self.output_path, fourcc, capture.get(cv2.CAP_PROP_FPS), 
+            (int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))))
+
+        while True:
+            ret, frame = capture.read()
+            if ret is True:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
+                frame = self.generate_frame_with_overlay(frame)
+                if self.show_processing == True:
+                    cv2.imshow('frame', frame)
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+                output.write(frame)
+
+                if cv2.waitKey(1) & 0xFF == 27:
+                    break
+            else:
+                break
+
+        capture.release()
+        output.release()
+        cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    main()
+    WatermarkAdder()
