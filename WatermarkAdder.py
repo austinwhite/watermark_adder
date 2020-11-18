@@ -5,21 +5,24 @@ class WatermarkAdder:
     def __init__(self):
         self.video_path = None
         self.watermark_path = None
-        self.watermark_cv_obj = None
-        self.watermark_pos_horizontal = "right"
-        self.watermark_pos_vertical = "bottom"
-        self.watermark_pos_center = False
         self.output_path = "./output.avi"
+        self.watermark_cv_obj = None
+        self.watermark_pos_horizontal = None
+        self.watermark_pos_vertical = None
+        self.watermark_pos_center = False
+        self.watermark_offset_horizontal = None
+        self.watermark_offset_vertical = None
         self.show_processing = True
         self.watermark_transparency = 0.5
         
-        self.overlay_watermark()
-
     def set_video_path(self, path):
         self.video_path = path
 
     def set_watermark_path(self, path):
         self.watermark_path = path
+        self.watermark_cv_obj = cv2.imread(self.watermark_path)
+        self.watermark_cv_obj = self.resize_image(self.watermark_cv_obj, height=50)
+        self.watermark_cv_obj = cv2.cvtColor(self.watermark_cv_obj, cv2.COLOR_BGR2BGRA)
 
     def set_output_path(self, path):
         self.output_path = path
@@ -30,13 +33,35 @@ class WatermarkAdder:
     def toggle_show_processing(self):
         self.show_processing = not self.show_processing
 
-    def set_watermark_position(self, vertical, horizontal, center):
+    def preform_processing(self):
+        if self.video_path is None or self.watermark_path is None:
+            if self.video_path:
+                print("Configure video path.")
+            else:
+                print("Configure watermark path.")
+            return 1
+
+        if self.watermark_pos_horizontal == None and self.watermark_pos_vertical == None \
+                                                    and self.watermark_pos_center == False:
+            self.set_watermark_position(horizontal="right", vertical="bottom", center=False)
+
+        self.overlay_watermark()
+
+    def set_watermark_position(self, vertical=None, horizontal=None, center=None):
         if vertical is not None:
             self.watermark_pos_vertical = vertical
         if horizontal is not None:
             self.watermark_pos_horizontal = horizontal
-        if center != self.watermark_pos_center:
+        if center != None and center != self.watermark_pos_center:
             self.watermark_pos_center = center
+        self.watermark_offset_horizontal = None
+        self.watermark_offset_vertical = None
+        self.watermark_offset_horizontal, self.watermark_offset_vertical = \
+                                        self.set_watermark_offsets(self.watermark_pos_vertical,
+                                        self.watermark_pos_horizontal, self.watermark_pos_center)
+
+    def get_watermark_position(self):
+        return self.watermark_pos_horizontal, self.watermark_pos_vertical, self.watermark_pos_center
 
     def set_watermark_offsets(self, vertical=None, horizontal=None, center=False):
         temp_cap = cv2.VideoCapture(self.video_path)
@@ -97,17 +122,6 @@ class WatermarkAdder:
         return frame    
 
     def overlay_watermark(self):
-        if self.video_path is None or self.watermark_path is None:
-            if self.video_path:
-                print("Configure video path.")
-            else:
-                print("Configure watermark path.")
-            return 1
-
-        self.watermark_cv_obj = cv2.imread(self.watermark_path)
-        self.watermark_cv_obj = self.resize_image(self.watermark_cv_obj, height=50)
-        self.watermark_cv_obj = cv2.cvtColor(self.watermark_cv_obj, cv2.COLOR_BGR2BGRA)
-
         capture = cv2.VideoCapture(self.video_path)
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         output = cv2.VideoWriter(self.output_path, fourcc, capture.get(cv2.CAP_PROP_FPS), 
