@@ -1,3 +1,0 @@
-import WatermarkAdder
-
-WatermarkAdder.WatermarkAdder()
