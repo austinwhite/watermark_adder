@@ -186,11 +186,16 @@ def main():
 
     parser = argparse.ArgumentParser(prog='WatermarkAdder')
     required = parser.add_argument_group('required arguments')
-    required.add_argument('-v', '--video', required=True, help='load video by path', type=str, metavar='')
-    required.add_argument('-w', '--watermark', required=True, help='load watermark by path', type=str, metavar='')
-    parser.add_argument('-t', '--transparency', required=False, help='set transparency: [0.1-1.0]', type=float, default=0.25, metavar='')
-    parser.add_argument('-p', '--processing', required=False, help='show processing', action='store_true')
-    parser.add_argument('-q', '--quadrant', required=False, help='quadrant to place the watermark: [0-8]', type=int, default=8, choices=range(0, 9), metavar='')
+    required.add_argument('-v', '--video', required=True,
+        help='load video by path', type=str, metavar='')
+    required.add_argument('-w', '--watermark', required=True,
+        help='load watermark by path', type=str, metavar='')
+    parser.add_argument('-t', '--transparency', required=False,
+        help='set transparency: [0.1-1.0]', type=float, default=0.25, metavar='')
+    parser.add_argument('-p', '--processing', required=False,
+        help='show processing', action='store_true')
+    parser.add_argument('-q', '--quadrant', required=False,
+        help='quadrant to place the watermark: [0-8]', type=int, default=8, choices=range(0, 9), metavar='')
     args = parser.parse_args()
 
     if not path.exists(args.video):
@@ -219,4 +224,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
